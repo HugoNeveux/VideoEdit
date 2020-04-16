@@ -73,11 +73,11 @@ def resize_video(video_path, output_file='out.avi', ratio=-1, conserve_ratio=Fal
     framerate = cap.get(cv2.CAP_PROP_FPS)
 
     ########## Output ratio ##########
-    if 0 <= ratio <= 1:
+    if 0 <= ratio <= 100:
         ratio_width = int(cap.get(3) * ratio)
         ratio_height = int(cap.get(4) * ratio)
     else:
-        return print("[X] You must provide a valid ratio number (float between 0 and 1).")
+        return print("[X] You must provide a valid ratio number (float between 0 and 100).")
 
     dsize = (ratio_width, ratio_height)
 
