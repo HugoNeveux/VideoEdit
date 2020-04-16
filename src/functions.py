@@ -28,7 +28,7 @@ def video_overlay(video_path, image_path, begin, end, output_file='out.avi', x=0
 
     ########## Creating VideoWriter object for output ##########
     fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-    out = cv2.VideoWriter(output_file[0], fourcc, framerate, (video_width, video_height))
+    out = cv2.VideoWriter(output_file, fourcc, framerate, (video_width, video_height))
 
     ########## Other ##########
     frame_counter = 0
@@ -65,24 +65,24 @@ def video_overlay(video_path, image_path, begin, end, output_file='out.avi', x=0
     cv2.destroyAllWindows()
 
 
-def resize_video(video_path, output_file, ratio=0):
+def resize_video(video_path, output_file='out.avi', ratio=-1, conserve_ratio=False):
     """ A function which resizes a video """
-    ########## Check if provided ratio is valid ##########
-    if not 0 < ratio < 100:
-        return print("[X] Provided ratio must be between 0 and 100 !")
-
     ########## Reading video ##########
     cap = cv2.VideoCapture(video_path)
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     framerate = cap.get(cv2.CAP_PROP_FPS)
 
-    ########## VideoWriter object for output ##########
-    out = cv2.VideoWriter(output_file, cv2.VideoWriter_fourcc(*'MJPG'), framerate, (int(cap.get(3)), int(cap.get(4))))
-
     ########## Output ratio ##########
-    ratio_width = int(cap.get(3) * ratio / 100)
-    ratio_height = int(cap.get(4) * ratio / 100)
+    if 0 <= ratio <= 1:
+        ratio_width = int(cap.get(3) * ratio)
+        ratio_height = int(cap.get(4) * ratio)
+    else:
+        return print("[X] You must provide a valid ratio number (float between 0 and 1).")
+
     dsize = (ratio_width, ratio_height)
+
+    ########## VideoWriter object for output ##########
+    out = cv2.VideoWriter(output_file, cv2.VideoWriter_fourcc(*'MJPG'), framerate, dsize)
 
     ########## Other ##########
     success = True
@@ -97,6 +97,8 @@ def resize_video(video_path, output_file, ratio=0):
         bar.next()
         resized = cv2.resize(frame, dsize)
         out.write(resized)
+
+    bar.finish()
 
     cap.release()
     out.release()
