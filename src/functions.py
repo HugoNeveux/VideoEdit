@@ -64,3 +64,40 @@ def video_overlay(video_path, image_path, begin, end, output_file='out.avi', x=0
     out.release()
     cv2.destroyAllWindows()
 
+
+def resize_video(video_path, output_file, ratio=0):
+    """ A function which resizes a video """
+    ########## Check if provided ratio is valid ##########
+    if not 0 < ratio < 100:
+        return print("[X] Provided ratio must be between 0 and 100 !")
+
+    ########## Reading video ##########
+    cap = cv2.VideoCapture(video_path)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    framerate = cap.get(cv2.CAP_PROP_FPS)
+
+    ########## VideoWriter object for output ##########
+    out = cv2.VideoWriter(output_file, cv2.VideoWriter_fourcc(*'MJPG'), framerate, (int(cap.get(3)), int(cap.get(4))))
+
+    ########## Output ratio ##########
+    ratio_width = int(cap.get(3) * ratio / 100)
+    ratio_height = int(cap.get(4) * ratio / 100)
+    dsize = (ratio_width, ratio_height)
+
+    ########## Other ##########
+    success = True
+
+    bar = Bar('Resizing video...', max=frame_count) # Creating progress bar 
+    
+    ########## Main loop ##########
+    while success:
+        success, frame = cap.read()
+        if np.shape(frame) == ():
+            break
+        bar.next()
+        resized = cv2.resize(frame, dsize)
+        out.write(resized)
+
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
