@@ -3,11 +3,12 @@ import numpy as np
 from progress.bar import Bar
 import time
 
-def video_overlay(video_path, image_path, begin, end, output_file='out.avi'):
+def video_overlay(video_path, image_path, begin, end, output_file='out.avi', x=0, y=0):
     ########## Reading video ########## 
     cap = cv2.VideoCapture(video_path) # Reading base video
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     framerate = cap.get(cv2.CAP_PROP_FPS)
+    video_width, video_height = int(cap.get(3)), int(cap.get(4))
 
     ########## Read and configure image and masks ##########
     overlay = cv2.imread(image_path, -1)    # Opening overlay
@@ -19,9 +20,15 @@ def video_overlay(video_path, image_path, begin, end, output_file='out.avi'):
 
     rows, cols, channels = overlay.shape    # Overlay properties
 
+    # Check if image can fit into the video
+    if cols >= video_width or rows >= video_height:
+        return print("[X] The provided image is too large to fit into the video - Please resize it")
+    elif x + cols >= video_width or y + rows >= video_height:
+        return print("[X] The specified coords are too big - can't overlay the image here")
+
     ########## Creating VideoWriter object for output ##########
     fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-    out = cv2.VideoWriter(output_file[0], fourcc, framerate, (int(cap.get(3)), int(cap.get(4))))
+    out = cv2.VideoWriter(output_file[0], fourcc, framerate, (video_width, video_height))
 
     ########## Other ##########
     frame_counter = 0
@@ -42,13 +49,13 @@ def video_overlay(video_path, image_path, begin, end, output_file='out.avi'):
         bar.next()  # Bar progress
         frame_counter += 1
         if frame_min <= frame_counter <= frame_max:
-            roi = frame[0:rows, 0:cols] 
+            roi = frame[y:y+rows, x:x+cols] 
             bg = cv2.bitwise_and(roi, roi, mask = mask_inv)
             fg = cv2.bitwise_and(overlay, overlay, mask = mask)
             
             dst = cv2.add(bg, fg)   # Add overlay (fg) to background (bg)
 
-            frame[0: rows, 0: cols] = dst
+            frame[y:y+rows, x:x+cols] = dst
         out.write(frame)    # Writing frame with overlay to output
 
     bar.finish()
