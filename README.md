@@ -1,2 +1,3 @@
-# VideoOverlay
-Python program to overlay an image into a video, using OpenCV
+# VideoEdit
+
+A tiny command-line python software for video resizing and video image overlaying.
