@@ -28,7 +28,7 @@ def overlayImageInit(image_path):
     return overlay, mask, mask_inv, rows, cols
 
 
-def video_overlay(video_path, image_path, begin, end, output_file='out.avi', x=0, y=0):
+def videoOverlay(video_path, image_path, begin, end, output_file='out.avi', x=0, y=0):
     ########## Load video #########
     cap, framerate, video_width, video_height = videoInit(video_path)
     frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
@@ -84,3 +84,40 @@ def video_overlay(video_path, image_path, begin, end, output_file='out.avi', x=0
     out.release()
     cv2.destroyAllWindows()
 
+def webcamOverlay(image_path, output_file ,x=0, y=0):
+    ########## Load video #########
+    cap, framerate, video_width, video_height = videoInit("0")
+    frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+
+    ######### Load overlay and create mask #########
+    overlay, mask, mask_inv, rows, cols = overlayImageInit(image_path)
+
+    ########## Creating VideoWriter object for output ##########
+    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+    out = cv2.VideoWriter(output_file, fourcc, framerate, (video_width, video_height))
+
+    if rows > cap.read()[1].shape[0] or cols > cap.read()[1].shape[1]:
+        return print("[X] The provided image is too large to fit into the video - Please resize it")
+    success = True
+
+    ########## Main loop ##########
+    while success:
+        success, frame = cap.read() # Reading video frame
+        if np.shape(frame) == ():   # If frame isn't empty
+            break
+        roi = frame[y:y+rows, x:x+cols] 
+        bg = cv2.bitwise_and(roi, roi, mask = mask_inv)
+        fg = cv2.bitwise_and(overlay, overlay, mask = mask)
+        
+        dst = cv2.add(bg, fg)   # Add overlay (fg) to background (bg)
+
+        frame[y:y+rows, x:x+cols] = dst
+        cv2.imshow("camera", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        out.write(frame)    # Writing frame with overlay to output
+
+
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
