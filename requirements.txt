@@ -1,0 +1,4 @@
+numpy
+progress
+opencv-python
+
