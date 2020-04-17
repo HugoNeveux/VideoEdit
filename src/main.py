@@ -2,7 +2,8 @@ import time
 import argparse
 import sys
 import os
-from functions import *
+from overlay import *
+from resize import *
 
 def main():
     parser = argparse.ArgumentParser()

@@ -3,14 +3,20 @@ import numpy as np
 from progress.bar import Bar
 import time
 
-def video_overlay(video_path, image_path, begin, end, output_file='out.avi', x=0, y=0):
-    ########## Reading video ########## 
-    cap = cv2.VideoCapture(video_path) # Reading base video
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+def videoInit(video_path):
+    """ A function to read video and get some infos about it """
+    if video_path == "0":
+        cap = cv2.VideoCapture(0)
+        success, frame = cap.read()
+        video_width, video_height, video_channels = frame.shape 
+    else:
+        cap = cv2.VideoCapture(video_path)
+        video_width, video_height = int(cap.get(3)), int(cap.get(4))
     framerate = cap.get(cv2.CAP_PROP_FPS)
-    video_width, video_height = int(cap.get(3)), int(cap.get(4))
+    return cap, framerate, video_width, video_height
 
-    ########## Read and configure image and masks ##########
+def overlayImageInit(image_path):
+    """ A function to read and create mask for overlay image """
     overlay = cv2.imread(image_path, -1)    # Opening overlay
 
     mask = overlay[:,:,3]   # Creating mask
@@ -19,11 +25,21 @@ def video_overlay(video_path, image_path, begin, end, output_file='out.avi', x=0
     overlay = overlay[:,:,0:3]  # PNG conversion to BGR
 
     rows, cols, channels = overlay.shape    # Overlay properties
+    return overlay, mask, mask_inv, rows, cols
+
+
+def video_overlay(video_path, image_path, begin, end, output_file='out.avi', x=0, y=0):
+    ########## Load video #########
+    cap, framerate, video_width, video_height = videoInit(video_path)
+    frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+
+    ######### Load overlay and create mask #########
+    overlay, mask, mask_inv, rows, cols = overlayImageInit(image_path)
 
     # Check if image can fit into the video
-    if cols >= video_width or rows >= video_height:
+    if cols >= video_width or rows >= video_height and video_path != "0":
         return print("[X] The provided image is too large to fit into the video - Please resize it")
-    elif x + cols >= video_width or y + rows >= video_height:
+    elif x + cols >= video_width or y + rows >= video_height and video_path != "0":
         return print("[X] The specified coords are too big - can't overlay the image here")
 
     ########## Creating VideoWriter object for output ##########
@@ -46,7 +62,8 @@ def video_overlay(video_path, image_path, begin, end, output_file='out.avi', x=0
         success, frame = cap.read() # Reading video frame
         if np.shape(frame) == ():   # If frame isn't empty
             break
-        bar.next()  # Bar progress
+        if video_path != "0":
+            bar.next()  # Bar progress
         frame_counter += 1
         if frame_min <= frame_counter <= frame_max:
             roi = frame[y:y+rows, x:x+cols] 
@@ -56,6 +73,9 @@ def video_overlay(video_path, image_path, begin, end, output_file='out.avi', x=0
             dst = cv2.add(bg, fg)   # Add overlay (fg) to background (bg)
 
             frame[y:y+rows, x:x+cols] = dst
+        if video_path == "0":
+            cv2.imshow("camera", frame)
+            cv2.waitKey(10)
         out.write(frame)    # Writing frame with overlay to output
 
     bar.finish()
@@ -64,42 +84,3 @@ def video_overlay(video_path, image_path, begin, end, output_file='out.avi', x=0
     out.release()
     cv2.destroyAllWindows()
 
-
-def resize_video(video_path, output_file='out.avi', ratio=-1, conserve_ratio=False):
-    """ A function which resizes a video """
-    ########## Reading video ##########
-    cap = cv2.VideoCapture(video_path)
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    framerate = cap.get(cv2.CAP_PROP_FPS)
-
-    ########## Output ratio ##########
-    if 0 <= ratio <= 100:
-        ratio_width = int(cap.get(3) * ratio)
-        ratio_height = int(cap.get(4) * ratio)
-    else:
-        return print("[X] You must provide a valid ratio number (float between 0 and 100).")
-
-    dsize = (ratio_width, ratio_height)
-
-    ########## VideoWriter object for output ##########
-    out = cv2.VideoWriter(output_file, cv2.VideoWriter_fourcc(*'MJPG'), framerate, dsize)
-
-    ########## Other ##########
-    success = True
-
-    bar = Bar('Resizing video...', max=frame_count) # Creating progress bar 
-    
-    ########## Main loop ##########
-    while success:
-        success, frame = cap.read()
-        if np.shape(frame) == ():
-            break
-        bar.next()
-        resized = cv2.resize(frame, dsize)
-        out.write(resized)
-
-    bar.finish()
-
-    cap.release()
-    out.release()
-    cv2.destroyAllWindows()
